@@ -9,20 +9,25 @@ import {
   TextInput,
 } from 'react-native';
 import axios from 'axios';
-import {API_KEY, API_URL} from '@env';
+import Geolocation from '@react-native-community/geolocation';
+import {API_KEY, API_URL_GET_ZONE, API_URL_CONVERT_ZONE} from '@env';
 
 const App = () => {
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
+  const [requestedLat, setRequestedLat] = useState('');
+  const [requestedLng, setRequestedLng] = useState('');
   const [time, setTime] = useState('');
-  const [zone, setZone] = useState('');
+  const [requestedZone, setRequestedZone] = useState('');
+  const [userZone, setUserZone] = useState('');
 
   useEffect(() => {
-    // Seattle coordinates
-    getTime('47.6062', '-122.3321');
-  }, []);
+    !userZone && getUserZone();
+  });
 
-  const getTime = async (a, b) => {
+  useEffect(() => {
+    getZoneOffset(userZone, requestedZone);
+  }, [requestedZone, userZone]);
+
+  const getZone = (a, b, zone) => {
     const params = {
       key: API_KEY,
       format: 'json',
@@ -31,44 +36,86 @@ const App = () => {
       lng: b,
     };
 
-    try {
-      const response = await axios.get(API_URL, {params});
-      const {
-        data: {status, formatted, message, zoneName},
-      } = response;
+    axios
+      .get(API_URL_GET_ZONE, {params})
+      .then((response) => {
+        const {
+          data: {zoneName, status, message},
+        } = response;
+        if (response && status === 'OK') {
+          zone === 'requested'
+            ? setRequestedZone(zoneName)
+            : setUserZone(zoneName);
+          console.log('ZONE ', zone, zoneName, status);
+        } else if (status === 'FAILED') {
+          Alert.alert(message);
+        }
+      })
+      .catch((error) => console.warn(error));
+  };
 
-      if (response && status === 'OK') {
-        setTime(formatted.substr(11, 19));
-        setZone(zoneName);
-      } else if (status === 'FAILED') {
-        Alert.alert(message);
-      }
-    } catch (error) {
-      console.warn(error);
-    }
+  const getUserZone = () => {
+    Geolocation.getCurrentPosition((position) => {
+      const {
+        coords: {latitude, longitude},
+      } = position;
+      getZone(latitude, longitude, 'user');
+    });
+  };
+
+  const getZoneOffset = (from, to) => {
+    const params = {
+      key: API_KEY,
+      format: 'json',
+      from,
+      to,
+      time: new Date().getTime(),
+    };
+    axios
+      .get(API_URL_CONVERT_ZONE, {params})
+      .then((response) => {
+        console.log(response);
+        const {
+          data: {offset},
+        } = response;
+
+        console.log('offset resp', response);
+
+        const date = new Date(new Date().getTime() + offset * 1000);
+
+        console.log('date: ', date);
+        const hours =
+          date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
+        const minutes =
+          date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+
+        console.log(typeof date.getHours(), date.getMinutes());
+
+        setTime(`${hours}:${minutes}`);
+      })
+      .catch((error) => console.warn(error));
   };
 
   return (
     <>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.container}>
-        <Text>{zone}</Text>
         <Text style={styles.time}>{time}</Text>
         <Text style={styles.title}>
           Enter coordinates to see time for that location
         </Text>
         <TextInput
           placeholder={'latitude'}
-          onChangeText={(text) => setLat(text)}
+          onChangeText={(text) => setRequestedLat(text)}
           style={styles.textInput}
         />
         <TextInput
           placeholder={'longitude'}
-          onChangeText={(text) => setLng(text)}
+          onChangeText={(text) => setRequestedLng(text)}
           style={styles.textInput}
         />
         <Button
-          onPress={() => getTime(lat, lng)}
+          onPress={() => getZone(requestedLat, requestedLng, 'requested')}
           title={'Submit'}
           color="#007AFF"
         />
@@ -95,8 +142,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     width: '50%',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    padding: 10,
     borderWidth: 1,
     borderColor: 'grey',
     borderRadius: 5,
