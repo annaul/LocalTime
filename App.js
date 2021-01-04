@@ -13,18 +13,30 @@ import Geolocation from '@react-native-community/geolocation';
 import {API_KEY, API_URL_GET_ZONE, API_URL_CONVERT_ZONE} from '@env';
 
 const App = () => {
+  const editTime = (offset) => {
+    const date = new Date(new Date().getTime() + offset * 1000);
+    const hours =
+      date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
+    const minutes =
+      date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
+
+    return `${hours}:${minutes}`;
+  };
+
   const [requestedLat, setRequestedLat] = useState('');
   const [requestedLng, setRequestedLng] = useState('');
-  const [time, setTime] = useState('');
+  const [time, setTime] = useState(editTime(0));
   const [requestedZone, setRequestedZone] = useState('');
   const [userZone, setUserZone] = useState('');
 
   useEffect(() => {
-    !userZone && getUserZone();
-  });
+    getUserZone();
+  }, []);
 
   useEffect(() => {
-    getZoneOffset(userZone, requestedZone);
+    if (userZone && requestedZone) {
+      getZoneOffset(userZone, requestedZone);
+    }
   }, [requestedZone, userZone]);
 
   const getZone = (a, b, zone) => {
@@ -46,7 +58,6 @@ const App = () => {
           zone === 'requested'
             ? setRequestedZone(zoneName)
             : setUserZone(zoneName);
-          console.log('ZONE ', zone, zoneName, status);
         } else if (status === 'FAILED') {
           Alert.alert(message);
         }
@@ -74,24 +85,11 @@ const App = () => {
     axios
       .get(API_URL_CONVERT_ZONE, {params})
       .then((response) => {
-        console.log(response);
         const {
           data: {offset},
         } = response;
 
-        console.log('offset resp', response);
-
-        const date = new Date(new Date().getTime() + offset * 1000);
-
-        console.log('date: ', date);
-        const hours =
-          date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
-        const minutes =
-          date.getMinutes() < 10 ? `0${date.getMinutes()}` : date.getMinutes();
-
-        console.log(typeof date.getHours(), date.getMinutes());
-
-        setTime(`${hours}:${minutes}`);
+        setTime(editTime(offset));
       })
       .catch((error) => console.warn(error));
   };
