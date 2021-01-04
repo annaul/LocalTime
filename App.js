@@ -80,7 +80,6 @@ const App = () => {
       format: 'json',
       from,
       to,
-      time: new Date().getTime(),
     };
     axios
       .get(API_URL_CONVERT_ZONE, {params})
