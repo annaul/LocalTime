@@ -8,12 +8,24 @@ import {
   Text,
   TextInput,
 } from 'react-native';
-import axios from 'axios';
-import Geolocation from '@react-native-community/geolocation';
+import axios, {AxiosResponse} from 'axios';
+import Geolocation, {
+  GeolocationResponse,
+} from '@react-native-community/geolocation';
 import {API_KEY, API_URL_GET_ZONE, API_URL_CONVERT_ZONE} from '@env';
 
-const App = () => {
-  const editTime = (offset) => {
+interface Params {
+  key: string;
+  format: string;
+  from?: string;
+  to?: string;
+  by?: string;
+  lat?: string;
+  lng?: string;
+}
+
+const App: React.FC = () => {
+  const editTime = (offset: number) => {
     const date = new Date(new Date().getTime() + offset * 1000);
     const hours =
       date.getHours() < 10 ? `0${date.getHours()}` : date.getHours();
@@ -23,24 +35,56 @@ const App = () => {
     return `${hours}:${minutes}`;
   };
 
-  const [requestedLat, setRequestedLat] = useState('');
-  const [requestedLng, setRequestedLng] = useState('');
-  const [time, setTime] = useState(editTime(0));
-  const [requestedZone, setRequestedZone] = useState('');
-  const [userZone, setUserZone] = useState('');
+  const [requestedLat, setRequestedLat] = useState<string>();
+  const [requestedLng, setRequestedLng] = useState<string>();
+  const [time, setTime] = useState<string>(editTime(0));
+  const [requestedZone, setRequestedZone] = useState<string>();
+  const [userZone, setUserZone] = useState<string>();
 
   useEffect(() => {
+    const getUserZone = () => {
+      Geolocation.getCurrentPosition((position: GeolocationResponse) => {
+        const {
+          coords: {latitude, longitude},
+        } = position;
+        getZone(latitude.toString(), longitude.toString(), 'user');
+      });
+    };
+
     getUserZone();
   }, []);
 
   useEffect(() => {
+    const getZoneOffset = (from: string, to: string) => {
+      const params: Params = {
+        key: API_KEY,
+        format: 'json',
+        from,
+        to,
+      };
+      axios
+        .get(API_URL_CONVERT_ZONE, {params})
+        .then((response: AxiosResponse) => {
+          const {
+            data: {offset},
+          } = response;
+
+          setTime(editTime(offset));
+        })
+        .catch((error: Error) => console.warn(error));
+    };
+
     if (userZone && requestedZone) {
       getZoneOffset(userZone, requestedZone);
     }
   }, [requestedZone, userZone]);
 
-  const getZone = (a, b, zone) => {
-    const params = {
+  const getZone = (
+    a: string | undefined,
+    b: string | undefined,
+    zone: string,
+  ) => {
+    const params: Params = {
       key: API_KEY,
       format: 'json',
       by: 'position',
@@ -50,7 +94,7 @@ const App = () => {
 
     axios
       .get(API_URL_GET_ZONE, {params})
-      .then((response) => {
+      .then((response: AxiosResponse) => {
         const {
           data: {zoneName, status, message},
         } = response;
@@ -62,35 +106,7 @@ const App = () => {
           Alert.alert(message);
         }
       })
-      .catch((error) => console.warn(error));
-  };
-
-  const getUserZone = () => {
-    Geolocation.getCurrentPosition((position) => {
-      const {
-        coords: {latitude, longitude},
-      } = position;
-      getZone(latitude, longitude, 'user');
-    });
-  };
-
-  const getZoneOffset = (from, to) => {
-    const params = {
-      key: API_KEY,
-      format: 'json',
-      from,
-      to,
-    };
-    axios
-      .get(API_URL_CONVERT_ZONE, {params})
-      .then((response) => {
-        const {
-          data: {offset},
-        } = response;
-
-        setTime(editTime(offset));
-      })
-      .catch((error) => console.warn(error));
+      .catch((error: Error) => console.warn(error));
   };
 
   return (
@@ -103,12 +119,12 @@ const App = () => {
         </Text>
         <TextInput
           placeholder={'latitude'}
-          onChangeText={(text) => setRequestedLat(text)}
+          onChangeText={(text: string) => setRequestedLat(text)}
           style={styles.textInput}
         />
         <TextInput
           placeholder={'longitude'}
-          onChangeText={(text) => setRequestedLng(text)}
+          onChangeText={(text: string) => setRequestedLng(text)}
           style={styles.textInput}
         />
         <Button
