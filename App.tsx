@@ -42,20 +42,18 @@ const App: React.FC = () => {
   const [userZone, setUserZone] = useState<string>();
 
   useEffect(() => {
-    const getUserZone = () => {
+    (() => {
       Geolocation.getCurrentPosition((position: GeolocationResponse) => {
         const {
           coords: {latitude, longitude},
         } = position;
         getZone(latitude.toString(), longitude.toString(), 'user');
       });
-    };
-
-    getUserZone();
+    })();
   }, []);
 
   useEffect(() => {
-    const getZoneOffset = (from: string, to: string) => {
+    ((from: string | undefined, to: string | undefined) => {
       const params: Params = {
         key: API_KEY,
         format: 'json',
@@ -72,11 +70,7 @@ const App: React.FC = () => {
           setTime(editTime(offset));
         })
         .catch((error: Error) => console.warn(error));
-    };
-
-    if (userZone && requestedZone) {
-      getZoneOffset(userZone, requestedZone);
-    }
+    })(userZone, requestedZone);
   }, [requestedZone, userZone]);
 
   const getZone = (
