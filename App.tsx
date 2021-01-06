@@ -24,6 +24,8 @@ interface Params {
   lng?: string;
 }
 
+type Coord = string | undefined;
+
 const App: React.FC = () => {
   const editTime = (offset: number) => {
     const date = new Date(new Date().getTime() + offset * 1000);
@@ -53,7 +55,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    ((from: string | undefined, to: string | undefined) => {
+    ((from: Coord, to: Coord) => {
       const params: Params = {
         key: API_KEY,
         format: 'json',
@@ -73,11 +75,7 @@ const App: React.FC = () => {
     })(userZone, requestedZone);
   }, [requestedZone, userZone]);
 
-  const getZone = (
-    a: string | undefined,
-    b: string | undefined,
-    zone: string,
-  ) => {
+  const getZone = (a: Coord, b: Coord, zone: string) => {
     const params: Params = {
       key: API_KEY,
       format: 'json',
