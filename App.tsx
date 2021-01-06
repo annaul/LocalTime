@@ -55,7 +55,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    ((from: Coord, to: Coord) => {
+    (async (from: Coord, to: Coord) => {
       const params: Params = {
         key: API_KEY,
         format: 'json',
@@ -75,7 +75,7 @@ const App: React.FC = () => {
     })(userZone, requestedZone);
   }, [requestedZone, userZone]);
 
-  const getZone = (a: Coord, b: Coord, zone: string) => {
+  const getZone = async (a: Coord, b: Coord, zone: string) => {
     const params: Params = {
       key: API_KEY,
       format: 'json',
